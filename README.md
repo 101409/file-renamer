@@ -1,0 +1,1 @@
+Small project that renames files using Python
