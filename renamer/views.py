@@ -29,7 +29,7 @@ class Window(QWidget, Ui_Window):
 
     def _setupUI(self):
         self.setupUi(self)
-
+        
         self.dirPathEdit = self.lineEdit
         self.prefixEdit = self.lineEdit_2
         self.sourceList = self.listWidget
@@ -37,13 +37,33 @@ class Window(QWidget, Ui_Window):
         self.extensionLabel = self.label_5
         self.loadButton = self.pushButton
         self.renameButton = self.pushButton_2
+        
+        self._updateStateWhenNoFiles()
+
+    def _updateStateWhenNoFiles(self):
+        self._filesCount = len(self._files)
+        self.loadButton.setEnabled(True)
+        self.loadButton.setFocus(True)
+        self.renameButton.setEnabled(False)
+        self.prefixEdit.clear()
+        self.prefixEdit.setEnabled(False)
+        self.progressBar.setValue(0)
 
     def _connectSignalsSlots(self):
         self.loadButton.clicked.connect(self.loadFiles)
         self.renameButton.clicked.connect(self.renameFiles)
+        self.prefixEdit.textChanged.connect(self._updateStateWhenReady)
+    
+    def _updateStateWhenReady(self):
+        self.renameButton.setEnabled(bool(self.prefixEdit.text()))
 
     def renameFiles(self):
         self._runRenamerThread()
+        self._updateStateWhileRenaming()
+
+    def _updateStateWhileRenaming(self):
+        self.loadButton.setEnabled(False)
+        self.renameButton.setEnabled(False)
     
     def _runRenamerThread(self):
         prefix = self.prefixEdit.text()
@@ -59,6 +79,7 @@ class Window(QWidget, Ui_Window):
         self._renamer.renamedFile.connect(self._updateStateWhenFileRenamed)
         self._renamer.progressed.connect(self._updateProgressBar)
 
+        self._renamer.finished.connect(self._updateStateWhenNoFiles)
         self._renamer.finished.connect(self._thread.quit)
         self._renamer.finished.connect(self._renamer.deleteLater)
         self._thread.finished.connect(self._thread.deleteLater)
@@ -91,7 +112,7 @@ class Window(QWidget, Ui_Window):
             self.extensionLabel.setText(fileExtension)
             srcDirName = str(Path(files[0]).parent)
             self.dirPathEdit.setText(srcDirName)
-
+            
             self._files.clear()
             self.sourceList.clear()
             
@@ -101,3 +122,9 @@ class Window(QWidget, Ui_Window):
             
             self._filesCount = len(self._files)
             self.progressBar.setValue(0)
+            
+            self._updateStateWhenFilesLoaded()
+        
+    def _updateStateWhenFilesLoaded(self):
+        self.prefixEdit.setEnabled(True)
+        self.prefixEdit.setFocus(True)
